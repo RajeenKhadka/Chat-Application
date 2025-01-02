@@ -50,8 +50,46 @@ export const signup = async (req, res) => {
   }
 };
 
-export const login = (req, res) => {};
+export const login = async (req, res) => {
+  //First we check if there is a user already exists using email
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+
+    //If no user is found
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    //If user is found compare the entered password with the stored hashed password
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    //If password is not correct
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    //If email and password is correct then generate a token
+    generateToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      profilePic: user.profilePic,
+    });
+  } catch (error) {
+    console.log("Error is login controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 export const logout = (req, res) => {
-  res.send("logout route");
+  //Logout is successful by clearing out the cookies
+  try {
+    res.cookie("jwt", "", { maxAge: 0 });
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.log("Error is logout controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 };
